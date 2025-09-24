@@ -80,8 +80,8 @@ def electronic_vibrational_AH(fchk_file_i, fchk_file_f):
     lmd_f = freq_f * S_f
     print_vibronic_data(freq_i, freq_f, Displace, "Displacement (a.u.)", f)
     print_vibronic_data(freq_i, freq_f, S_f, "Huang-Rhys Factor", f)
-    f.writelines("Total Reorganalization Energy (cm-1): {:.4f}".format(np.sum(lmd_f)/CM2AU))
-    print_vibronic_data(freq_i, freq_f, lmd_f/CM2AU, "Reorganalization Energy (cm-1)", f)
+    f.writelines("Total Reorganization Energy (cm-1): {:.4f}".format(np.sum(lmd_f)/CM2AU))
+    print_vibronic_data(freq_i, freq_f, lmd_f/CM2AU, "Reorganization Energy (cm-1)", f)
     np.savetxt("Duschinsky.dat", Duschinsky, fmt="%10.6f")
 
     f.close()
@@ -110,13 +110,15 @@ def electronic_vibrational_VG(fchk_file_i, fchk_file_f):
 
     invsqrt_mass = 1/np.sqrt(np.repeat(mass_f, 3))
     grad_Q_f = np.einsum("j,j,ji->i", grad_f.flat, invsqrt_mass, mwmodes_i)
-    Displace = grad_Q_f / freq_i**2
+    dQ = grad_Q_f / freq_i**2
 
-    S = 0.5 * freq_i * Displace**2
+    S = 0.5 * freq_i * dQ**2
     lmd = freq_i * S
-    print_vibronic_data(freq_i, freq_i, Displace, "Displacement (a.u.)", f)
+    g = grad_Q_f / np.sqrt(2*freq_i**3)
+    print_vibronic_data(freq_i, freq_i, dQ, "Displacement (a.u.)", f)
+    print_vibronic_data(freq_i, freq_i, g, "Dimensionless Displacement", f)
     print_vibronic_data(freq_i, freq_i, S, "Huang-Rhys Factor", f)
-    f.writelines("Total Reorganalization Energy (cm-1): {:.4f}".format(np.sum(lmd)/CM2AU))
-    print_vibronic_data(freq_i, freq_i, lmd/CM2AU, "Reorganalization Energy (cm-1)", f)
+    f.writelines("Total Reorganization Energy (cm-1): {:.4f}".format(np.sum(lmd)/CM2AU))
+    print_vibronic_data(freq_i, freq_i, lmd/CM2AU, "Reorganization Energy (cm-1)", f)
 
     f.close()

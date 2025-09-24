@@ -2,5 +2,4 @@
 *.out
 *.log
 *.com
-*.ipynb
 */__pycache__
