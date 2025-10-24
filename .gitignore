@@ -3,3 +3,4 @@
 *.log
 *.com
 */__pycache__
+.DS_Store

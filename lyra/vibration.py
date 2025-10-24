@@ -21,6 +21,13 @@ def solve_hess(hess, mass, coord):
     return freq, mwmodes
 
 
+def apply_rotation_on_hess(hess, R):
+    xR = np.zeros_like(hess)
+    for i in range(hess.shape[0]//3):
+        xR[i*3:(i+1)*3, i*3:(i+1)*3] = R
+    return xR @ hess @ xR.T
+
+
 def calculate_frequency(fchk_file):
     fchk = Formchk(fchk_file)
 
@@ -58,31 +65,43 @@ def electronic_vibrational_AH(fchk_file_i, fchk_file_f):
     coord_f, rmsd, R = kabsch_alignment(coord_i, coord_f, mass_f)
 
     f = open("lyra_vibronic_analysis.out", 'w')
-    print_coordinate(atomic_number_i, coord_i, "Initial State Coordinate", f)
-    print_coordinate(atomic_number_f, coord_f, "Final State Coordinate (Aligned)", f)
+    print_coordinate(atomic_number_i, coord_i, f'Initial State Coordinate "{fchk_file_i}"', f)
+    print_coordinate(atomic_number_f, coord_f, f'Final State Coordinate (Aligned) "{fchk_file_f}"', f)
 
     hess_i = fchk_i.hessian()
     hess_f = fchk_f.hessian()
-    xR = np.zeros((3*len(mass_f), 3*len(mass_f)))
-    for i in range(len(mass_i)):
-        xR[i*3:(i+1)*3, i*3:(i+1)*3] = R
-    hess_f = xR @ hess_f @ xR.T
+    hess_f = apply_rotation_on_hess(hess_f, R)
 
     freq_i, mwmodes_i = solve_hess(hess_i, mass_i, coord_i)
     freq_f, mwmodes_f = solve_hess(hess_f, mass_f, coord_f)
 
-    Duschinsky = mwmodes_f.T @ mwmodes_i
-    flatmass = np.repeat(mass_f, 3)
-    dq = np.sqrt(flatmass) * (coord_i-coord_f).flat
-    Displace = mwmodes_f.T @ dq
+    def Duschinsky(xyz1, xyz2, mwmode1, mwmode2, freq1, mass):
+        J = mwmode1.T @ mwmode2
+        flatmass = np.repeat(mass, 3)
+        dQcart = np.sqrt(flatmass) * (xyz1-xyz2).flat
+        dQ = mwmode1.T @ dQcart
 
-    S_f = 0.5 * freq_f * Displace**2
-    lmd_f = freq_f * S_f
-    print_vibronic_data(freq_i, freq_f, Displace, "Displacement (a.u.)", f)
-    print_vibronic_data(freq_i, freq_f, S_f, "Huang-Rhys Factor", f)
-    f.writelines("Total Reorganization Energy (cm-1): {:.4f}".format(np.sum(lmd_f)/CM2AU))
-    print_vibronic_data(freq_i, freq_f, lmd_f/CM2AU, "Reorganization Energy (cm-1)", f)
-    np.savetxt("Duschinsky.dat", Duschinsky, fmt="%10.6f")
+        S = 0.5 * freq1 * dQ**2
+        lmd = freq1 * S
+
+        return J, dQ, S, lmd
+
+    J_if, dQ_if, S_i, lmd_i = Duschinsky(coord_i, coord_f, mwmodes_i, mwmodes_f, freq_i, mass_i)
+    J_fi, dQ_fi, S_f, lmd_f = Duschinsky(coord_f, coord_i, mwmodes_f, mwmodes_i, freq_f, mass_f)
+
+    def print_vibronic_analysis(f, ref, freq, dQ, S, lmd):
+        f.writelines(f'Initial State "{ref}" as the Reference State\n')
+        print_vibronic_data(freq, dQ, "Displacement (a.u.)", f)
+        print_vibronic_data(freq, S, "Huang-Rhys Factor", f)
+        f.writelines("Total Reorganization Energy (cm-1): {:.4f}\n".format(np.sum(lmd)/CM2AU))
+        print_vibronic_data(freq, lmd/CM2AU, "Reorganization Energy (cm-1)", f)
+        f.writelines("\n")
+
+    print_vibronic_analysis(f, fchk_file_i, freq_i, dQ_if, S_i, lmd_i)
+    print_vibronic_analysis(f, fchk_file_f, freq_f, dQ_fi, S_f, lmd_f)
+
+    np.savetxt("Duschinsky_if.dat", J_if, fmt="%10.6f")
+    np.savetxt("Duschinsky_fi.dat", J_fi, fmt="%10.6f")
 
     f.close()
 

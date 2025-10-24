@@ -131,15 +131,12 @@ def print_coordinate(atomic_number, coord, title, file):
     file.writelines("---------------------------------------------\n\n")
 
 
-def print_vibronic_data(freq_i, freq_f, data, title, file):
-    file.writelines('''
-------------------------------------------
-           Frequency (cm-1)
-''')
-    file.writelines("   No.    Initial     Final   {}\n".format(title))
+def print_vibronic_data(freq, data, title, file):
     file.writelines("---------------------------------------------\n")
-    for i in range(len(freq_f)):
-        file.write("{:>5d}{:>11.2f}{:>11.2f}{:>12.4f}\n".format(
-            i+1, freq_i[i]/CM2AU, freq_f[i]/CM2AU, data[i]))
+    file.writelines("   No.    Frequency (cm-1)   {}\n".format(title))
+    file.writelines("---------------------------------------------\n")
+    for i in range(len(freq)):
+        file.write("{:>5d}{:>16.2f}{:>18.4f}\n".format(
+            i+1, freq[i]/CM2AU, data[i]))
     file.writelines("---------------------------------------------\n\n")
 
