@@ -3,7 +3,7 @@ import numpy.linalg as linalg
 
 from lyra.data import AMU2AU, CM2AU, MASSES
 from lyra.utils import Formchk, print_coordinate, print_vibronic_data
-from lyra.geom import move_to_origin, eckart_projection, kabsch_alignment
+from lyra.geom import move_to_origin, eckart_projection, kabsch_alignment, quaternions_alignment
 
 
 def solve_hess(hess, mass, coord):
@@ -63,6 +63,7 @@ def electronic_vibrational_AH(fchk_file_i, fchk_file_f):
     coord_f = move_to_origin(mass_f, coord_f)
 
     coord_f, rmsd, R = kabsch_alignment(coord_i, coord_f, mass_f)
+    #coord_f, rmsd, R = quaternions_alignment(coord_i, coord_f, mass_f)
 
     f = open("lyra_vibronic_analysis.out", 'w')
     print_coordinate(atomic_number_i, coord_i, f'Initial State Coordinate "{fchk_file_i}"', f)

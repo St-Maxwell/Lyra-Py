@@ -103,3 +103,38 @@ def kabsch_alignment(Q, P, mass):
     Pprime = P @ R
 
     return Pprime, geom_massweighted_rmsd(Pprime, Q, mass), R
+
+
+def quaternions_alignment(Q, P, mass):
+    Xp = np.einsum("i,ij->ij", np.sqrt(mass), Q + P)
+    Xm = np.einsum("i,ij->ij", np.sqrt(mass), Q - P)
+
+    M = np.zeros((4,4))
+    from numpy import square as pow2
+    M[0,0] = np.sum(pow2(Xm)) # xm2+ym2+zm2
+    M[1,1] = np.sum(pow2(Xp[:,1:])) + np.sum(pow2(Xm[:,0])) # yp2+zp2+xm2
+    M[2,2] = np.sum(pow2(Xp[:,0])) + np.sum(pow2(Xp[:,2])) + np.sum(pow2(Xm[:,1])) # xp2+zp2+ym2
+    M[3,3] = np.sum(pow2(Xp[:,:2])) + np.sum(pow2(Xm[:,2])) # xp2+yp2+zm2
+    M[1,0] = M[0,1] = np.dot(Xp[:,1],Xm[:,2]) - np.dot(Xp[:,2],Xm[:,1])
+    M[2,0] = M[0,2] = np.dot(Xp[:,2],Xm[:,0]) - np.dot(Xp[:,0],Xm[:,2])
+    M[3,0] = M[0,3] = np.dot(Xp[:,0],Xm[:,1]) - np.dot(Xp[:,1],Xm[:,0])
+    M[2,1] = M[1,2] = np.dot(Xm[:,0],Xm[:,1]) - np.dot(Xp[:,0],Xp[:,1])
+    M[3,1] = M[1,3] = np.dot(Xm[:,0],Xm[:,2]) - np.dot(Xp[:,0],Xp[:,2])
+    M[3,2] = M[2,3] = np.dot(Xm[:,1],Xm[:,2]) - np.dot(Xp[:,1],Xp[:,2])
+
+    l, q = linalg.eigh(M)
+    q1, q2, q3, q4 = q[:,0]
+    R = np.zeros((3,3))
+    R[0,0] = q1*q1 + q2*q2 - q3*q3 - q4*q4
+    R[1,1] = q1*q1 - q2*q2 + q3*q3 - q4*q4
+    R[2,2] = q1*q1 - q2*q2 - q3*q3 + q4*q4
+    R[1,0] = 2 * (q2*q3 + q1*q4)
+    R[2,0] = 2 * (q2*q4 - q1*q3)
+    R[2,1] = 2 * (q3*q4 + q1*q2)
+    R[0,1] = 2 * (q2*q3 - q1*q4)
+    R[0,2] = 2 * (q2*q4 + q1*q3)
+    R[1,2] = 2 * (q3*q4 - q1*q2)
+
+    Pprime = P @ R
+
+    return Pprime, geom_massweighted_rmsd(Pprime, Q, mass), R
